@@ -65,6 +65,10 @@ def install(args, is_excluded):
                 if args.verbose:
                     print("LINK", rel_path, dest_path)
                 if not args.dry_run:
+                    if path.islink(dest_path):
+                        if args.verbose:
+                            print("DANGLE", dest_path)
+                        os.unlink(dest_path)
                     os.symlink(rel_path, dest_path)
 
 
@@ -90,10 +94,10 @@ def uninstall(args, is_excluded):
                 if path.islink(dest_path):
                     src_path = path.realpath(path.join(root, filename))
                     if path.realpath(dest_path) == src_path:
-                        if not args.dry_run:
-                            os.unlink(dest_path)
                         if args.verbose:
                             print("UNLINK", dest_path)
+                        if not args.dry_run:
+                            os.unlink(dest_path)
                     elif args.verbose:
                         print("SKIP", dest_path)
                 elif args.verbose:

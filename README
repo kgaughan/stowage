@@ -81,6 +81,5 @@ To do
 
 * Currently exclusions only work with files, but ought to work with
   directories too.
-* A `--add` flag for stowing a file in a package would be useful.
 
 .. vim:set ft=rst:

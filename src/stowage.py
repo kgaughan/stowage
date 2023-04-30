@@ -1,29 +1,5 @@
-#!/usr/bin/env python3
 """
-stowage
-by Keith Gaughan <https://github.com/kgaughan/>
-
 Stow, but in Python, and in a single file.
-
-Copyright (c) Keith Gaughan, 2017.
-
-Permission is hereby granted, free of charge, to any person obtaining a copy of
-this software and associated documentation files (the "Software"), to deal in
-the Software without restriction, including without limitation the rights to
-use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
-of the Software, and to permit persons to whom the Software is furnished to do
-so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
 """
 
 import argparse
@@ -33,9 +9,13 @@ from os import path
 import re
 import shutil
 import sys
+from typing import Callable
 
 
-def add(args):
+__version__ = "1.0.0"
+
+
+def add(args: argparse.Namespace):
     target = path.realpath(args.target)
     file_path = path.realpath(args.add)
     package = path.realpath(args.packages[0])
@@ -45,10 +25,9 @@ def add(args):
     rest = file_path[len(target) + 1:]
     dest_path = path.join(package, rest)
     dest = path.dirname(dest_path)
-    if not path.exists(dest):
-        if args.verbose:
-            print("DIR", dest)
-        os.makedirs(dest, mode=0o755)
+    if args.verbose and not path.exists(dest):
+        print("DIR", dest)
+    os.makedirs(dest, mode=0o755, exist_ok=True)
     if args.verbose:
         print("SWAP", dest_path, file_path)
     if not args.dry_run:
@@ -57,7 +36,7 @@ def add(args):
         os.symlink(dest_path, file_path)
 
 
-def install(args, is_excluded):
+def install(args: argparse.Namespace, is_excluded: Callable[[str], bool]):
     for package in args.packages:
         if not path.isdir(package):
             print(f"no such package: {package}; skipping", file=sys.stderr)
@@ -90,7 +69,7 @@ def install(args, is_excluded):
                     os.symlink(src_path, dest_path)
 
 
-def uninstall(args, is_excluded):
+def uninstall(args: argparse.Namespace, is_excluded: Callable[[str], bool]):
     dirs = []
     for package in args.packages:
         if not path.isdir(package):
@@ -129,9 +108,14 @@ def uninstall(args, is_excluded):
             pass
 
 
-def make_argparser():
+def make_argparser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="A symlink farm manager.")
-    parser.add_argument("--verbose", "-v", action="store_true", help="Verbose output")
+    parser.add_argument(
+        "--verbose",
+        "-v",
+        action="store_true",
+        help="Verbose output",
+    )
     parser.add_argument(
         "--target",
         "-t",
@@ -146,7 +130,12 @@ def make_argparser():
         metavar="GLOB",
         help="Glob pattern of files to exclude",
     )
-    parser.add_argument("--dry-run", "-n", action="store_true", help="Dry run.")
+    parser.add_argument(
+        "--dry-run",
+        "-n",
+        action="store_true",
+        help="Dry run",
+    )
 
     group = parser.add_mutually_exclusive_group(required=False)
     group.add_argument(
@@ -157,11 +146,17 @@ def make_argparser():
         help="Uninstall symlinks",
     )
     group.add_argument(
-        "--add", "-a", metavar="FILE", help="Stow files in a particular package"
+        "--add",
+        "-a",
+        metavar="FILE",
+        help="Stow files in a particular package",
     )
 
     parser.add_argument(
-        "packages", metavar="PACKAGE", nargs="+", help="Packages to install"
+        "packages",
+        metavar="PACKAGE",
+        nargs="+",
+        help="Packages to install",
     )
     return parser
 

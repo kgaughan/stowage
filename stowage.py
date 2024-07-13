@@ -9,7 +9,7 @@ from os import path
 import re
 import shutil
 import sys
-from typing import Callable
+import typing as t
 
 
 __version__ = "1.0.0"
@@ -36,7 +36,7 @@ def add(args: argparse.Namespace):
         os.symlink(dest_path, file_path)
 
 
-def install(args: argparse.Namespace, is_excluded: Callable[[str], bool]):
+def install(args: argparse.Namespace, is_excluded: t.Callable[[str], bool]):
     for package in args.packages:
         if not path.isdir(package):
             print(f"no such package: {package}; skipping", file=sys.stderr)
@@ -69,7 +69,7 @@ def install(args: argparse.Namespace, is_excluded: Callable[[str], bool]):
                     os.symlink(src_path, dest_path)
 
 
-def uninstall(args: argparse.Namespace, is_excluded: Callable[[str], bool]):
+def uninstall(args: argparse.Namespace, is_excluded: t.Callable[[str], bool]):
     dirs = []
     for package in args.packages:
         if not path.isdir(package):

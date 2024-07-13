@@ -9,7 +9,7 @@ from os import path
 import re
 import shutil
 import sys
-from typing import Callable
+import typing as t
 
 
 __version__ = "1.0.0"
@@ -22,7 +22,7 @@ def add(args: argparse.Namespace):
     if path.commonprefix([target, file_path]) != target:
         print(f"error: '{args.add}' not under '{args.target}'", file=sys.stderr)
         sys.exit(1)
-    rest = file_path[len(target) + 1:]
+    rest = file_path[len(target) + 1 :]
     dest_path = path.join(package, rest)
     dest = path.dirname(dest_path)
     if args.verbose and not path.exists(dest):
@@ -36,7 +36,7 @@ def add(args: argparse.Namespace):
         os.symlink(dest_path, file_path)
 
 
-def install(args: argparse.Namespace, is_excluded: Callable[[str], bool]):
+def install(args: argparse.Namespace, is_excluded: t.Callable[[str], bool]):
     for package in args.packages:
         if not path.isdir(package):
             print(f"no such package: {package}; skipping", file=sys.stderr)
@@ -45,7 +45,7 @@ def install(args: argparse.Namespace, is_excluded: Callable[[str], bool]):
             files = [filename for filename in files if not is_excluded(filename)]
             if len(files) == 0:
                 continue
-            rest = root[len(package) + 1:]
+            rest = root[len(package) + 1 :]
             dest = path.join(args.target, rest)
             if rest != "":
                 if args.verbose:
@@ -69,7 +69,7 @@ def install(args: argparse.Namespace, is_excluded: Callable[[str], bool]):
                     os.symlink(src_path, dest_path)
 
 
-def uninstall(args: argparse.Namespace, is_excluded: Callable[[str], bool]):
+def uninstall(args: argparse.Namespace, is_excluded: t.Callable[[str], bool]):
     dirs = []
     for package in args.packages:
         if not path.isdir(package):
@@ -79,7 +79,7 @@ def uninstall(args: argparse.Namespace, is_excluded: Callable[[str], bool]):
             files = [filename for filename in files if not is_excluded(filename)]
             if len(files) == 0:
                 continue
-            rest = root[len(package) + 1:]
+            rest = root[len(package) + 1 :]
             dest = path.join(args.target, rest)
             if rest != "":
                 dirs.append(dest)

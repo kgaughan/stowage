@@ -22,7 +22,7 @@ def add(args: argparse.Namespace):
     if path.commonprefix([target, file_path]) != target:
         print(f"error: '{args.add}' not under '{args.target}'", file=sys.stderr)
         sys.exit(1)
-    rest = file_path[len(target) + 1:]
+    rest = file_path[len(target) + 1 :]
     dest_path = path.join(package, rest)
     dest = path.dirname(dest_path)
     if args.verbose and not path.exists(dest):
@@ -45,7 +45,7 @@ def install(args: argparse.Namespace, is_excluded: Callable[[str], bool]):
             files = [filename for filename in files if not is_excluded(filename)]
             if len(files) == 0:
                 continue
-            rest = root[len(package) + 1:]
+            rest = root[len(package) + 1 :]
             dest = path.join(args.target, rest)
             if rest != "":
                 if args.verbose:
@@ -79,7 +79,7 @@ def uninstall(args: argparse.Namespace, is_excluded: Callable[[str], bool]):
             files = [filename for filename in files if not is_excluded(filename)]
             if len(files) == 0:
                 continue
-            rest = root[len(package) + 1:]
+            rest = root[len(package) + 1 :]
             dest = path.join(args.target, rest)
             if rest != "":
                 dirs.append(dest)

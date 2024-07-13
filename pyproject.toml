@@ -1,9 +1,12 @@
+#:schema https://json.schemastore.org/pyproject.json
+
 [build-system]
-requires = ["flit_core >=3.2,<4"]
-build-backend = "flit_core.buildapi"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
 [project]
 name = "stowage"
+description = "Stow, but in Python, and in a single file"
 authors = [
 	{name = "Keith Gaughan", email = "keith+stowage@gaughan.ie"},
 ]
@@ -16,11 +19,29 @@ classifiers = [
 	"Intended Audience :: End Users/Desktop",
 	"Environment :: Console",
 ]
-requires-python = ">=3.5"
-dynamic = ["version", "description"]
+requires-python = ">=3.8"
+dynamic = ["version"]
 
 [project.urls]
-Home = "https://github.com/kgaughan/stowage"
+Source = "https://github.com/kgaughan/stowage"
 
 [project.scripts]
 stowage = "stowage:main"
+
+[tool.rye]
+dev-dependencies = [
+    "pytest>=8.2.2",
+    "mypy>=1.10.1",
+]
+universal = true
+generate-hashes = true
+managed = true
+
+[tool.hatch.version]
+path = "stowage.py"
+
+[tool.hatch.build]
+exclude = [".coveragerc", "Makefile", ".github/", ".*_cache/", "tests/"]
+
+[tool.mypy]
+ignore_missing_imports = true

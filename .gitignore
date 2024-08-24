@@ -1,7 +1,34 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+
+# Environments
+.venv/
+
+# Distribution/packaging
+dist/
+
+# Unit test / coverage reports
+.coverage
+htmlcov/
+tests/results.xml
+.*_cache/
+
+# General detritus
 *~
 .*.sw?
-*.py[co]
-/build/
-/dist/
-*.egg-info
-/MANIFEST
+*.orig
+*.bak
+*.log
+
+# Databases
+*.db
+*.sqlite
+*.sqlite3
+
+# Mkdocs
+/site/
+
+# Other
+master.key
+_version.py

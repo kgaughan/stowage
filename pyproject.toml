@@ -6,42 +6,100 @@ build-backend = "hatchling.build"
 
 [project]
 name = "stowage"
-description = "Stow, but in Python, and in a single file"
-authors = [
-	{name = "Keith Gaughan", email = "keith+stowage@gaughan.ie"},
-]
-readme = "README.rst"
-license = {file = "LICENSE"}
-classifiers = [
-	"License :: OSI Approved :: MIT License",
-	"Development Status :: 4 - Beta",
-	"Intended Audience :: Developers",
-	"Intended Audience :: End Users/Desktop",
-	"Environment :: Console",
-]
-requires-python = ">=3.8"
 dynamic = ["version"]
+description = "Stow, but in Python, and in a single file"
+license = { file = "LICENSE" }
+authors = [{ name = "Keith Gaughan", email = "keith+stowage@gaughan.ie" }]
+requires-python = ">=3.8"
+readme = "README.rst"
+classifiers = [
+  "Environment :: Console",
+  "License :: OSI Approved :: MIT License",
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Developers",
+  "Intended Audience :: End Users/Desktop",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3.8",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: Implementation :: CPython",
+  "Programming Language :: Python :: Implementation :: PyPy",
+]
 
 [project.urls]
+Documentation = "https://github.com/kgaughan/stowage"
+Issues = "https://github.com/kgaughan/stowage/issues"
 Source = "https://github.com/kgaughan/stowage"
 
 [project.scripts]
 stowage = "stowage:main"
 
 [tool.rye]
-dev-dependencies = [
-    "pytest>=8.2.2",
-    "mypy>=1.10.1",
-]
+dev-dependencies = ["mypy>=1.10.1"]
 universal = true
 generate-hashes = true
 managed = true
 
+[tool.hatch.build.targets.sdist]
+include = ["requirements.lock", "stowage.py"]
+
 [tool.hatch.version]
 path = "stowage.py"
 
-[tool.hatch.build]
-exclude = [".coveragerc", "Makefile", ".github/", ".*_cache/", "tests/"]
+[tool.black]
+line-length = 120
+
+[tool.ruff]
+target-version = "py37"
+line-length = 120
+src = ["src"]
+
+[tool.ruff.lint]
+select = [
+  "A",
+  "ARG",
+  "B",
+  "C",
+  "DTZ",
+  "E",
+  "EM",
+  "F",
+  "FBT",
+  "I",
+  "ICN",
+  "ISC002",
+  "N",
+  "PLC",
+  "PLE",
+  "PLR",
+  "PLW",
+  "Q",
+  "RUF",
+  "S",
+  "T",
+  "TID",
+  "UP",
+  "W",
+  "YTT",
+]
+ignore = [
+  # Allow print
+  "T201",
+]
+
+[tool.ruff.lint.isort]
+force-sort-within-sections = true
+known-first-party = ["stowage"]
+
+[tool.ruff.lint.flake8-tidy-imports]
+ban-relative-imports = "all"
+
+[tool.ruff.lint.per-file-ignores]
+# Tests can use magic values, assertions, and relative imports
+"tests/**/*" = ["PLR2004", "S101", "TID252", "E501"]
 
 [tool.mypy]
 ignore_missing_imports = true

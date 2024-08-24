@@ -11,7 +11,6 @@ import shutil
 import sys
 import typing as t
 
-
 __version__ = "1.0.0"
 
 
@@ -36,74 +35,63 @@ def add(args: argparse.Namespace):
         os.symlink(dest_path, file_path)
 
 
-def install(args: argparse.Namespace, is_excluded: t.Callable[[str], bool]):
-    for package in args.packages:
+def walk_packages(
+    target: str,
+    packages: t.Sequence[str],
+    is_excluded: t.Callable[[str], bool],
+) -> t.Iterator[t.Tuple[str, str, bool, t.Sequence[str]]]:
+    for package in packages:
         if not path.isdir(package):
             print(f"no such package: {package}; skipping", file=sys.stderr)
             continue
         for root, _, files in os.walk(package, followlinks=True):
-            files = [filename for filename in files if not is_excluded(filename)]
-            if len(files) == 0:
+            files = [filename for filename in files if not is_excluded(filename)]  # noqa: PLW2901
+            if files:
+                rest = root[len(package) + 1 :]
+                yield (root, path.join(target, rest), rest != "", files)
+
+
+def install(args: argparse.Namespace, is_excluded: t.Callable[[str], bool]):
+    for root, dest, _, files in walk_packages(args.target, args.packages, is_excluded):
+        if not args.dry_run and not os.path.exists(dest):
+            print("DIR", dest)
+            os.makedirs(dest, mode=0o755)
+        for filename in files:
+            dest_path = path.join(dest, filename)
+            if path.exists(dest_path):
+                if args.verbose:
+                    print("SKIP", dest_path)
                 continue
-            rest = root[len(package) + 1 :]
-            dest = path.join(args.target, rest)
-            if rest != "":
-                if args.verbose:
-                    print("DIR", dest)
-                if not args.dry_run and not os.path.exists(dest):
-                    os.makedirs(dest, mode=0o755)
-            for filename in files:
-                dest_path = path.join(dest, filename)
-                if path.exists(dest_path):
+            src_path = path.realpath(path.join(root, filename))
+            if args.verbose:
+                print("LINK", src_path, dest_path)
+            if not args.dry_run:
+                if path.islink(dest_path):
                     if args.verbose:
-                        print("SKIP", dest_path)
-                    continue
-                src_path = path.realpath(path.join(root, filename))
-                if args.verbose:
-                    print("LINK", src_path, dest_path)
-                if not args.dry_run:
-                    if path.islink(dest_path):
-                        if args.verbose:
-                            print("DANGLE", dest_path)
-                        os.unlink(dest_path)
-                    os.symlink(src_path, dest_path)
+                        print("DANGLE", dest_path)
+                    os.unlink(dest_path)
+                os.symlink(src_path, dest_path)
 
 
 def uninstall(args: argparse.Namespace, is_excluded: t.Callable[[str], bool]):
     dirs = []
-    for package in args.packages:
-        if not path.isdir(package):
-            print(f"no such package: {package}; skipping", file=sys.stderr)
-            continue
-        for root, _, files in os.walk(package, followlinks=True):
-            files = [filename for filename in files if not is_excluded(filename)]
-            if len(files) == 0:
-                continue
-            rest = root[len(package) + 1 :]
-            dest = path.join(args.target, rest)
-            if rest != "":
-                dirs.append(dest)
-            for filename in files:
-                dest_path = path.join(dest, filename)
-                if path.islink(dest_path):
-                    src_path = path.realpath(path.join(root, filename))
-                    if path.realpath(dest_path) == src_path:
-                        if args.verbose:
-                            print("UNLINK", dest_path)
-                        if not args.dry_run:
-                            os.unlink(dest_path)
-                    elif args.verbose:
-                        print("SKIP", dest_path)
-                elif args.verbose:
-                    print("SKIP", dest_path)
+    for root, dest, trim, files in walk_packages(args.target, args.packages, is_excluded):
+        if trim and not args.dry_run:
+            dirs.append(dest)
+        for filename in files:
+            dest_path = path.join(dest, filename)
+            if path.islink(dest_path):
+                src_path = path.realpath(path.join(root, filename))
+                if path.realpath(dest_path) == src_path:
+                    if args.verbose:
+                        print("UNLINK", dest_path)
+                    if not args.dry_run:
+                        os.unlink(dest_path)
 
     # Delete the directories if empty.
     for dir_path in sorted(dirs, key=len, reverse=True):
         try:
-            if args.verbose:
-                print("RMDIR", dir_path)
-            if not args.dry_run:
-                os.rmdir(dir_path)
+            os.rmdir(dir_path)
         except OSError:
             pass
 

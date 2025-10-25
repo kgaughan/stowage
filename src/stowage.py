@@ -13,6 +13,7 @@ This is covered under the terms of the MIT license. Please see the file
 import argparse
 import contextlib
 import fnmatch
+import logging
 import os
 from os import path
 import re
@@ -20,28 +21,35 @@ import shutil
 import sys
 import typing as t
 
-__version__ = "1.0.0"
+__version__ = "1.1.0"
+
+logger = logging.getLogger(__name__)
 
 
 def add(args: argparse.Namespace) -> None:
     target = path.realpath(args.target)
     file_path = path.realpath(args.add)
     package = path.realpath(args.packages[0])
-    if path.commonprefix([target, file_path]) != target:
-        print(f"error: '{args.add}' not under '{args.target}'", file=sys.stderr)
+    try:
+        if path.commonpath([target, file_path]) != target:
+            logger.error("'%s' not under '%s'", args.add, args.target)
+            sys.exit(1)
+    except ValueError:
+        logger.error("path comparison failed for %s", args.add)  # noqa: TRY400
         sys.exit(1)
-    rest = file_path[len(target) + 1 :]
+    rest = path.relpath(file_path, start=target)
     dest_path = path.join(package, rest)
     dest = path.dirname(dest_path)
-    if args.verbose and not path.exists(dest):
-        print("DIR", dest)
+    logger.debug("Moving %s to %s", file_path, dest_path)
     os.makedirs(dest, mode=0o755, exist_ok=True)
-    if args.verbose:
-        print("SWAP", dest_path, file_path)
     if not args.dry_run:
         shutil.move(file_path, dest)
-        # XXX Should really check if the symlink fails here.
-        os.symlink(dest_path, file_path)
+        logger.debug("Creating symlink: %s -> %s", file_path, dest_path)
+        try:
+            os.symlink(dest_path, file_path)
+        except OSError:
+            logger.exception("Could not create symlink")
+            sys.exit(1)
 
 
 def walk_packages(
@@ -49,40 +57,68 @@ def walk_packages(
     packages: t.Sequence[str],
     is_excluded: t.Callable[[str], bool],
 ) -> t.Iterator[tuple[str, str, bool, t.Sequence[str]]]:
+    """Find any files to be symlinked from the packages into the target directories.
+
+    Args:
+        target: The target directory in which to place symlinks.
+        packages: A sequence of package directories to walk.
+        is_excluded: A callable that takes a filename and returns True if it should be excluded
+
+    Yields:
+        Tuple (source directory, destination directory, trim flag, files)
+
+    The trim flag indicates whether the destination directory can be removed
+    if it becomes empty.
+    """
     for package in packages:
         if not path.isdir(package):
-            print(f"no such package: {package}; skipping", file=sys.stderr)
+            logger.warning("no such package: %s; skipping", package)
             continue
-        for root, _, files in os.walk(package, followlinks=True):
-            files = [filename for filename in files if not is_excluded(filename)]  # noqa: PLW2901
-            if files:
-                rest = root[len(package) + 1 :]
-                yield (root, path.join(target, rest), rest != "", files)
+        for root, dirnames, files in os.walk(package, followlinks=False):
+            dirnames[:] = [d for d in dirnames if not is_excluded(d)]
+            if files := [f for f in files if not is_excluded(f)]:
+                rest = path.relpath(root, path.realpath(package))
+                yield (root, path.normpath(path.join(target, rest)), rest != ".", files)
+
+
+def check_directory_writable(directory: str) -> None:
+    """Check if directory exists, is a directory, and is writable."""
+    if not path.exists(directory):
+        return
+    if not path.isdir(directory):
+        logger.error("path exists but is not a directory: %s", directory)
+        sys.exit(1)
+    if not os.access(directory, os.W_OK):
+        logger.error("directory not writable: %s", directory)
+        sys.exit(1)
 
 
 def install(args: argparse.Namespace, is_excluded: t.Callable[[str], bool]) -> None:
+    """Install symlinks from the packages into the target directory."""
+    check_directory_writable(args.target)
+
     for root, dest, _, files in walk_packages(args.target, args.packages, is_excluded):
-        if not args.dry_run and not os.path.exists(dest):
-            print("DIR", dest)
-            os.makedirs(dest, mode=0o755)
+        if not args.dry_run:
+            logger.debug("Processing directory: %s", dest)
+            os.makedirs(dest, mode=0o755, exist_ok=True)
         for filename in files:
             dest_path = path.join(dest, filename)
-            if path.exists(dest_path):
-                if args.verbose:
-                    print("SKIP", dest_path)
+            if not args.dry_run and path.exists(dest_path):
+                logger.debug("Skipping existing file: %s", dest_path)
                 continue
             src_path = path.realpath(path.join(root, filename))
-            if args.verbose:
-                print("LINK", src_path, dest_path)
-            if not args.dry_run:
-                if path.islink(dest_path):
-                    if args.verbose:
-                        print("DANGLE", dest_path)
-                    os.unlink(dest_path)
-                os.symlink(src_path, dest_path)
+            logger.debug("Creating symlink: %s -> %s", dest_path, src_path)
+            # If this is a dry run we don't actually modify the filesystem.
+            if args.dry_run:
+                continue
+            if path.islink(dest_path):
+                logger.debug("Removing old symlink: %s", dest_path)
+                os.unlink(dest_path)
+            os.symlink(src_path, dest_path)
 
 
 def uninstall(args: argparse.Namespace, is_excluded: t.Callable[[str], bool]) -> None:
+    """Uninstall symlinks from the target directory."""
     dirs = []
     for root, dest, trim, files in walk_packages(args.target, args.packages, is_excluded):
         if trim and not args.dry_run:
@@ -92,15 +128,15 @@ def uninstall(args: argparse.Namespace, is_excluded: t.Callable[[str], bool]) ->
             if path.islink(dest_path):
                 src_path = path.realpath(path.join(root, filename))
                 if path.realpath(dest_path) == src_path:
-                    if args.verbose:
-                        print("UNLINK", dest_path)
+                    logger.debug("Removing symlink: %s", dest_path)
                     if not args.dry_run:
                         os.unlink(dest_path)
 
     # Delete the directories if empty.
-    for dir_path in sorted(dirs, key=len, reverse=True):
-        with contextlib.suppress(OSError):
-            os.rmdir(dir_path)
+    if not args.dry_run:
+        for dir_path in sorted(dirs, key=len, reverse=True):
+            with contextlib.suppress(OSError):
+                os.rmdir(dir_path)
 
 
 def make_argparser() -> argparse.ArgumentParser:
@@ -159,6 +195,13 @@ def make_argparser() -> argparse.ArgumentParser:
 def main() -> None:
     parser = make_argparser()
     args = parser.parse_args()
+
+    logging.basicConfig(
+        format="%(levelname)s: %(message)s",
+        level=logging.DEBUG if args.verbose else logging.INFO,
+        stream=sys.stderr,
+    )
+
     exclude = [re.compile(fnmatch.translate(pattern)) for pattern in args.exclude]
 
     def is_excluded(filename: str) -> bool:
@@ -178,4 +221,10 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        sys.exit(130)  # 128 + SIGINT(2)
+    except Exception as exc:
+        print(f"error: {exc}", file=sys.stderr)  # noqa: T201
+        sys.exit(1)

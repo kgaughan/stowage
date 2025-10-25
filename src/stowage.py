@@ -30,8 +30,12 @@ def add(args: argparse.Namespace) -> None:
     target = path.realpath(args.target)
     file_path = path.realpath(args.add)
     package = path.realpath(args.packages[0])
-    if path.commonpath([target, file_path]) != target:
-        logger.error("'%s' not under '%s'", args.add, args.target)
+    try:
+        if path.commonpath([target, file_path]) != target:
+            logger.error("'%s' not under '%s'", args.add, args.target)
+            sys.exit(1)
+    except ValueError:
+        logger.error("path comparison failed for %s", args.add)  # noqa: TRY400
         sys.exit(1)
     rest = path.relpath(file_path, start=target)
     dest_path = path.join(package, rest)

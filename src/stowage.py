@@ -1,6 +1,7 @@
 """
 stowage
 by Keith Gaughan <https://keith.gaughan.ie>
+
 Stow, but in Python, and in a single file.
 
 Copyright (c) Keith Gaughan, 2017-2025.

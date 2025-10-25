@@ -32,3 +32,7 @@ tests/results.xml
 # Other
 master.key
 _version.py
+
+# There are no real dependencies (except for development dependencies), so
+# I don't actually want this checked in.
+*.lock

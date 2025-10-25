@@ -34,11 +34,11 @@ Source = "https://github.com/kgaughan/stowage"
 [project.scripts]
 stowage = "stowage:main"
 
+[dependency-groups]
+dev = ["mypy"]
+
 [tool.flit.module]
 name = "stowage"
-
-[tool.black]
-line-length = 120
 
 [tool.ruff]
 target-version = "py311"
@@ -89,10 +89,6 @@ select = [
   "W",
   "YTT",
 ]
-ignore = [
-  # Allow print
-  "T201",
-]
 
 [tool.ruff.lint.isort]
 force-sort-within-sections = true
@@ -106,4 +102,9 @@ ban-relative-imports = "all"
 "tests/**/*" = ["PLR2004", "S101", "TID252", "E501"]
 
 [tool.mypy]
+python_version = "3.11"
 ignore_missing_imports = true
+strict = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+check_untyped_defs = true

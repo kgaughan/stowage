@@ -1,8 +1,16 @@
 """
+stowage
+by Keith Gaughan <https://keith.gaughan.ie>
 Stow, but in Python, and in a single file.
+
+Copyright (c) Keith Gaughan, 2017-2025.
+
+This is covered under the terms of the MIT license. Please see the file
+"LICENSE" for details.
 """
 
 import argparse
+import contextlib
 import fnmatch
 import os
 from os import path
@@ -14,7 +22,7 @@ import typing as t
 __version__ = "1.0.0"
 
 
-def add(args: argparse.Namespace):
+def add(args: argparse.Namespace) -> None:
     target = path.realpath(args.target)
     file_path = path.realpath(args.add)
     package = path.realpath(args.packages[0])
@@ -39,7 +47,7 @@ def walk_packages(
     target: str,
     packages: t.Sequence[str],
     is_excluded: t.Callable[[str], bool],
-) -> t.Iterator[t.Tuple[str, str, bool, t.Sequence[str]]]:
+) -> t.Iterator[tuple[str, str, bool, t.Sequence[str]]]:
     for package in packages:
         if not path.isdir(package):
             print(f"no such package: {package}; skipping", file=sys.stderr)
@@ -51,7 +59,7 @@ def walk_packages(
                 yield (root, path.join(target, rest), rest != "", files)
 
 
-def install(args: argparse.Namespace, is_excluded: t.Callable[[str], bool]):
+def install(args: argparse.Namespace, is_excluded: t.Callable[[str], bool]) -> None:
     for root, dest, _, files in walk_packages(args.target, args.packages, is_excluded):
         if not args.dry_run and not os.path.exists(dest):
             print("DIR", dest)
@@ -73,7 +81,7 @@ def install(args: argparse.Namespace, is_excluded: t.Callable[[str], bool]):
                 os.symlink(src_path, dest_path)
 
 
-def uninstall(args: argparse.Namespace, is_excluded: t.Callable[[str], bool]):
+def uninstall(args: argparse.Namespace, is_excluded: t.Callable[[str], bool]) -> None:
     dirs = []
     for root, dest, trim, files in walk_packages(args.target, args.packages, is_excluded):
         if trim and not args.dry_run:
@@ -90,10 +98,8 @@ def uninstall(args: argparse.Namespace, is_excluded: t.Callable[[str], bool]):
 
     # Delete the directories if empty.
     for dir_path in sorted(dirs, key=len, reverse=True):
-        try:
+        with contextlib.suppress(OSError):
             os.rmdir(dir_path)
-        except OSError:
-            pass
 
 
 def make_argparser() -> argparse.ArgumentParser:
@@ -149,12 +155,12 @@ def make_argparser() -> argparse.ArgumentParser:
     return parser
 
 
-def main():
+def main() -> None:
     parser = make_argparser()
     args = parser.parse_args()
     exclude = [re.compile(fnmatch.translate(pattern)) for pattern in args.exclude]
 
-    def is_excluded(filename):
+    def is_excluded(filename: str) -> bool:
         return any(pattern.match(filename) for pattern in exclude)
 
     if args.add:

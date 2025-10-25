@@ -78,9 +78,12 @@ def walk_packages(
 
 
 def check_directory_writable(directory: str) -> None:
-    """Check if directory exists and is writable."""
+    """Check if directory exists, is a directory, and is writable."""
     if not path.exists(directory):
         return
+    if not path.isdir(directory):
+        logger.error("path exists but is not a directory: %s", directory)
+        sys.exit(1)
     if not os.access(directory, os.W_OK):
         logger.error("directory not writable: %s", directory)
         sys.exit(1)

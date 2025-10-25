@@ -72,8 +72,7 @@ def walk_packages(
             continue
         for root, dirnames, files in os.walk(package, followlinks=False):
             dirnames[:] = [d for d in dirnames if not is_excluded(d)]
-            files = [f for f in files if not is_excluded(f)]  # noqa: PLW2901
-            if files:
+            if files := [f for f in files if not is_excluded(f)]:
                 rest = path.relpath(root, path.realpath(package))
                 yield (root, path.normpath(path.join(target, rest)), rest != ".", files)
 
